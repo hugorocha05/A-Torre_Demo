@@ -15,3 +15,15 @@ texture = ExtResource("2_d5ujg")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 shape = SubResource("RectangleShape2D_rj8ne")
+
+[node name="Timers" type="Node" parent="."]
+
+[node name="DashTimer" type="Timer" parent="Timers"]
+wait_time = 0.2
+one_shot = true
+
+[node name="DashCooldown" type="Timer" parent="Timers"]
+one_shot = true
+
+[connection signal="timeout" from="Timers/DashTimer" to="." method="_on_dash_timer_timeout"]
+[connection signal="timeout" from="Timers/DashCooldown" to="." method="_on_dash_cooldown_timeout"]
