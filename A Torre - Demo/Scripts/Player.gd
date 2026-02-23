@@ -4,21 +4,21 @@ extends CharacterBody2D
 # Character variables
 # ----------------------------
 var max_speed := 300.0  # Max speed that the player-character can achieve while running
-var acceleration := 8.0  # Acceleration value of the player-character, permits smooth movement
+var acceleration := 10.0  # Acceleration value of the player-character, permits smooth movement
 var input_vector := Vector2.ZERO  # The input vector is a Vector2 I'm using to determine the direction of movement with x and y values ranging from -1 to 1. Ex: (-1, 0) means the input vector is "moving left" and (0, 1) means it's "moving down"
 
 var dash_speed := 900.0  # Speed of the player while dashing
 var dash_direction := Vector2.RIGHT  # Used to keep track of the last movement direction so the dash can be predictable and consistent
 var dash_duration := 0.15
 var can_dash := true  # Flag used to apply a dash cooldown
-var dash_cooldown_duration := 2.0 
+var dash_cooldown_duration := 1.5 
 
 enum MovementState {  # Basic state machine
 	NORMAL,
 	DASHING
 }
 
-var movement_state:= MovementState.NORMAL
+var movement_state := MovementState.NORMAL  # Starting state is the normal state
 
 # ---------------------------
 # Setup
@@ -32,6 +32,9 @@ func _ready():
 	# Setting up the timer wait times
 	dash_timer.wait_time = dash_duration
 	dash_cooldown.wait_time = dash_cooldown_duration
+	
+	# Adding player to the Player group, this allows easier reference to the player node
+	add_to_group("Player")
 
 # ----------------------------
 # Movement
