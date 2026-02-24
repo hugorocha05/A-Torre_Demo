@@ -3,11 +3,12 @@
 [ext_resource type="Script" path="res://Scripts/Player.gd" id="1_iy2jn"]
 [ext_resource type="Texture2D" uid="uid://bg30xwhkmcba2" path="res://icon.svg" id="2_d5ujg"]
 
-[sub_resource type="RectangleShape2D" id="RectangleShape2D_rj8ne"]
-size = Vector2(96, 96)
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_3d88c"]
+size = Vector2(94, 94)
 
 [node name="Player" type="CharacterBody2D"]
 z_index = 1
+motion_mode = 1
 script = ExtResource("1_iy2jn")
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
@@ -15,7 +16,7 @@ scale = Vector2(0.8, 0.8)
 texture = ExtResource("2_d5ujg")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
-shape = SubResource("RectangleShape2D_rj8ne")
+shape = SubResource("RectangleShape2D_3d88c")
 
 [node name="Timers" type="Node" parent="."]
 
@@ -26,5 +27,10 @@ one_shot = true
 [node name="DashCooldown" type="Timer" parent="Timers"]
 one_shot = true
 
+[node name="HitFlashTimer" type="Timer" parent="Timers"]
+wait_time = 0.15
+one_shot = true
+
 [connection signal="timeout" from="Timers/DashTimer" to="." method="_on_dash_timer_timeout"]
 [connection signal="timeout" from="Timers/DashCooldown" to="." method="_on_dash_cooldown_timeout"]
+[connection signal="timeout" from="Timers/HitFlashTimer" to="." method="_on_hit_flash_timer_timeout"]

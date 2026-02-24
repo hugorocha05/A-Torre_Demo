@@ -1,12 +1,10 @@
 [gd_scene load_steps=3 format=3 uid="uid://bs4v6l7pt56oe"]
 
+[ext_resource type="Script" path="res://Scripts/Root.gd" id="1_0ey8g"]
 [ext_resource type="PackedScene" uid="uid://dwl1mkeq36phl" path="res://Scenes/player.tscn" id="1_5o2fo"]
-[ext_resource type="PackedScene" uid="uid://odn0xemnf5do" path="res://Scenes/basic_enemy.tscn" id="2_swoft"]
 
 [node name="Root" type="Node2D"]
+script = ExtResource("1_0ey8g")
 
 [node name="Player" parent="." instance=ExtResource("1_5o2fo")]
-position = Vector2(934, 317)
-
-[node name="Basic Enemy" parent="." instance=ExtResource("2_swoft")]
-position = Vector2(218, 312)
+position = Vector2(640, 320)
