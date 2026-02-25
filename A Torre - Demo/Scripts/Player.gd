@@ -1,32 +1,23 @@
 extends CharacterBody2D
 
 # ----------------------------
-# Constants
-# ----------------------------
-
-# Constants used to keep track of original/starting stats (check counterparts for their meaning)
-const MAX_SPEED := 300.0
-const ACCELERATION := 10.0
-const DASH_SPEED := 900.0
-const HEALTH := 3
-
-# ----------------------------
 # Variables
 # ----------------------------
 
 # Variables used to define the stats at runtime
-var max_speed := MAX_SPEED  # Max speed that the player-character can achieve while running
-var acceleration := ACCELERATION  # Acceleration value of the player-character, permits smooth movement
+var max_speed := 300.0  # Max speed that the player-character can achieve while running
+var acceleration := 10.0  # Acceleration value of the player-character, permits smooth movement
 var input_vector := Vector2.ZERO  # The input vector is a Vector2 I'm using to determine the direction of movement with x and y values ranging from -1 to 1. Ex: (-1, 0) means the input vector is "moving left" and (0, 1) means it's "moving down"
 
-var dash_speed := DASH_SPEED  # Speed of the player while dashing
+var dash_speed := 900.0  # Speed of the player while dashing
 var dash_direction := Vector2.RIGHT  # Used to keep track of the last movement direction so the dash can be predictable and consistent
 var dash_duration := 0.15
 var can_dash := true  # Flag used to apply a dash cooldown
 var dash_cooldown_duration := 1.5
 
-var health := HEALTH  # How many hits the player can take before dying
+var health := 3  # How many hits the player can take before dying
 var hits_taken := 0  # How many hits the player has currently taken
+var bleed_resistance := 5  # How many seconds it takes to die while bleeding
 
 var speed_debuff := 0.10
 var acceleration_debuff := 0.05
@@ -43,17 +34,44 @@ var movement_state := MovementState.NORMAL  # Starting state is the normal state
 # ---------------------------
 # Setup
 # ----------------------------
+var defaults := {}  # Dictionary used to store the default values of variables
 
 # Accessing child nodes
 @onready var dash_timer = $Timers/DashTimer
 @onready var dash_cooldown = $Timers/DashCooldown
-@onready var sprite = $Sprite2D
 @onready var hit_flash_timer = $Timers/HitFlashTimer
+@onready var bleed_timer = $Timers/BleedTimer
+@onready var sprite = $Sprite2D
 
 func _ready():
 	# Setting up the timer wait times
 	dash_timer.wait_time = dash_duration
 	dash_cooldown.wait_time = dash_cooldown_duration
+	bleed_timer.wait_time = bleed_resistance
+	
+	# Taking a snapshot of the default values before running
+	defaults = {
+		# Movement core
+		"max_speed": max_speed,
+		"acceleration": acceleration,
+
+		# Dash system
+		"dash_speed": dash_speed,
+		"dash_direction": dash_direction,
+		"dash_duration": dash_duration,
+		"can_dash": can_dash,
+		"dash_cooldown_duration": dash_cooldown_duration,
+
+		# Health / damage
+		"health": health,
+		"hits_taken": hits_taken,
+		"bleed_resistance": bleed_resistance,
+
+		# Debuffs
+		"speed_debuff": speed_debuff,
+		"acceleration_debuff": acceleration_debuff,
+		"dash_speed_debuff": dash_speed_debuff
+	}
 	
 	# Adding player to the Player group, this allows easier reference to the player node
 	add_to_group("Player")
@@ -114,47 +132,80 @@ func take_hit(hit_value: int) -> void:
 	print("hit\n")
 	
 	hits_taken += hit_value
-	update_movement_stats()
-	
-	if hits_taken >= health:
-		die()
-		return
-		
 	sprite.modulate = Color.CRIMSON  # Flash when hit
 	hit_flash_timer.start()
-
-func _on_hit_flash_timer_timeout():
-	sprite.modulate = Color.WHITE
-
+	
+	update_movement_stats()
+	update_hurt_state()
+	
+func update_movement_stats() -> void:
+	# The calculations below consider the following logic: if I want to reduce a variable by 10%, that's the same as making that variable be worth 90% of it's original value (since 100% - 10% = 90%). In code this would be variable = 0.90 * variable (remember that percentages multiply the original value) or you could also write it as variable = (1 - 0.10) * variable. Finally, I want the reduction to be proportional to the amount of hits taken, therefore me multiply the original reduction by the hits so if the player is hit once we reduce speed by 10% (10 * 1) but if he's hit twice we reduce the speed by 20% (10 * 2). So in the end we have 1 - (10% * hits taken) as the number we should multiply the original value by to get the new one.
+	max_speed = (1 - (speed_debuff * hits_taken)) * defaults["max_speed"]
+	acceleration = (1 - (acceleration_debuff * hits_taken)) * defaults["acceleration"]
+	dash_speed = (1 - (dash_speed_debuff * hits_taken)) * defaults["dash_speed"]
+	
+	max_speed = clamp(max_speed, 0.0, defaults["max_speed"])
+	acceleration = clamp(acceleration, 0.0, defaults["acceleration"])
+	dash_speed = clamp(dash_speed, 0.0, defaults["dash_speed"])
+	
+	print("Hits Taken: ", hits_taken)
+	print("Speed: ", max_speed)
+	print("Acceleration: ", acceleration)
+	print("Dash Speed: ", dash_speed)
+	print("\n")
+	
+func update_hurt_state() -> void:
+	if hits_taken >= health:
+		die()
+		
+	if health - hits_taken == 1:
+		bleed()
+	
 func die() -> void:
+	stop_timers()
 	movement_state = MovementState.DEAD
 	sprite.modulate = Color.DIM_GRAY  # Simple color change  to visualize death
 	
 	print("DEAD\n")
 	
-func update_movement_stats() -> void:
-	# The calculations below consider the following logic: if I want to reduce a variable by 10%, that's the same as making that variable be worth 90% of it's original value (since 100% - 10% = 90%). In code this would be variable = 0.90 * variable (remember that percentages multiply the original value) or you could also write it as variable = (1 - 0.10) * variable. Finally, I want the reduction to be proportional to the amount of hits taken, therefore me multiply the original reduction by the hits so if the player is hit once we reduce speed by 10% (10 * 1) but if he's hit twice we reduce the speed by 20% (10 * 2). So in the end we have 1 - (10% * hits taken) as the number we should multiply the original value by to get the new one.
-	max_speed = (1 - (speed_debuff * hits_taken)) * MAX_SPEED
-	acceleration = (1 - (acceleration_debuff * hits_taken)) * ACCELERATION
-	dash_speed = (1 - (dash_speed_debuff * hits_taken)) * DASH_SPEED
-	
-	max_speed = clamp(max_speed, 0.0, MAX_SPEED)
-	acceleration = clamp(acceleration, 0.0, ACCELERATION)
-	dash_speed = clamp(dash_speed, 0.0, DASH_SPEED)
+func bleed() -> void:
+	if bleed_timer.is_stopped():
+		print("Bleeding (", bleed_resistance, " seconds til death)")
+		bleed_timer.start()
 
+func _on_bleed_timer_timeout():
+	die()
+
+func _on_hit_flash_timer_timeout():
+	sprite.modulate = Color.WHITE
+	
 # ----------------------------
 # Processing
 # ----------------------------
+func stop_timers() -> void:
+	# Stop all timers
+	dash_timer.stop()
+	dash_cooldown.stop()
+	hit_flash_timer.stop()
+	bleed_timer.stop()
+
 func reset() -> void:
+	for key in defaults:
+		set(key, defaults[key])
+
+	# Reinitialize dynamic state
 	movement_state = MovementState.NORMAL
-	max_speed = MAX_SPEED
-	acceleration = ACCELERATION
-	dash_speed = DASH_SPEED
-	hits_taken = 0
-	sprite.modulate = Color.WHITE
-	can_dash = true
-	dash_direction = Vector2.RIGHT
+	input_vector = Vector2.ZERO
 	velocity = Vector2.ZERO
+
+	stop_timers()
+
+	# Reapply timer configs
+	dash_timer.wait_time = dash_duration
+	dash_cooldown.wait_time = dash_cooldown_duration
+	bleed_timer.wait_time = bleed_resistance
+
+	sprite.modulate = Color.WHITE
 	
 func _physics_process(delta: float) -> void:
 	if movement_state != MovementState.DEAD:
